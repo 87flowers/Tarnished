@@ -353,7 +353,9 @@ int main(int agrc, char* argv[]) {
 
     char str[INPUT_SIZE];
     while (GetInput(str)) {
+        // clang-format off
         switch (HashInput(str)) {
+
             case GO         : UCIGo(searcher, board, str);                break;
             case UCI        : UCIInfo();                                  break;
             case ISREADY    : std::cout << "readyok" << std::endl;        break;
@@ -372,6 +374,7 @@ int main(int agrc, char* argv[]) {
             case CONFIG     : printOBConfig();                            break;
 
         }
+        // clang-format on
     }
 
     return 0;

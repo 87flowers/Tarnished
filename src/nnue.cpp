@@ -24,8 +24,7 @@ int32_t NNUE::SCReLU_(int16_t x) {
     return x * x;
 }
 // Thanks Turbulence and Chef
-#if defined(__x86_64__) || defined(__amd64__) ||                               \
-    (defined(_WIN64) && (defined(_M_X64) || defined(_M_AMD64)))
+#if defined(__x86_64__) || defined(__amd64__) || (defined(_WIN64) && (defined(_M_X64) || defined(_M_AMD64)))
     #include <immintrin.h>
     #if defined(__AVX512F__)
         #pragma message("Using AVX512 NNUE inference")
@@ -48,16 +47,16 @@ using nativeVector = __m256i;
         #define madd_epi16 _mm256_madd_epi16
         #define mullo_epi16 _mm256_mullo_epi16
         #define add_epi32 _mm256_add_epi32
-        #define reduce_epi32                                                   \
-            [](nativeVector vec) {                                             \
-                __m128i xmm1 = _mm256_extracti128_si256(vec, 1);               \
-                __m128i xmm0 = _mm256_castsi256_si128(vec);                    \
-                xmm0 = _mm_add_epi32(xmm0, xmm1);                              \
-                xmm1 = _mm_shuffle_epi32(xmm0, 238);                           \
-                xmm0 = _mm_add_epi32(xmm0, xmm1);                              \
-                xmm1 = _mm_shuffle_epi32(xmm0, 85);                            \
-                xmm0 = _mm_add_epi32(xmm0, xmm1);                              \
-                return _mm_cvtsi128_si32(xmm0);                                \
+        #define reduce_epi32                                                                                           \
+            [](nativeVector vec) {                                                                                     \
+                __m128i xmm1 = _mm256_extracti128_si256(vec, 1);                                                       \
+                __m128i xmm0 = _mm256_castsi256_si128(vec);                                                            \
+                xmm0 = _mm_add_epi32(xmm0, xmm1);                                                                      \
+                xmm1 = _mm_shuffle_epi32(xmm0, 238);                                                                   \
+                xmm0 = _mm_add_epi32(xmm0, xmm1);                                                                      \
+                xmm1 = _mm_shuffle_epi32(xmm0, 85);                                                                    \
+                xmm0 = _mm_add_epi32(xmm0, xmm1);                                                                      \
+                return _mm_cvtsi128_si32(xmm0);                                                                        \
             }
     #else
         #pragma message("Using SSE NNUE inference")
@@ -70,53 +69,43 @@ using nativeVector = __m128i;
         #define madd_epi16 _mm_madd_epi16
         #define mullo_epi16 _mm_mullo_epi16
         #define add_epi32 _mm_add_epi32
-        #define reduce_epi32                                                   \
-            [](nativeVector vec) {                                             \
-                __m128i xmm1 = _mm_shuffle_epi32(vec, 238);                    \
-                vec = _mm_add_epi32(vec, xmm1);                                \
-                xmm1 = _mm_shuffle_epi32(vec, 85);                             \
-                vec = _mm_add_epi32(vec, xmm1);                                \
-                return _mm_cvtsi128_si32(vec);                                 \
+        #define reduce_epi32                                                                                           \
+            [](nativeVector vec) {                                                                                     \
+                __m128i xmm1 = _mm_shuffle_epi32(vec, 238);                                                            \
+                vec = _mm_add_epi32(vec, xmm1);                                                                        \
+                xmm1 = _mm_shuffle_epi32(vec, 85);                                                                     \
+                vec = _mm_add_epi32(vec, xmm1);                                                                        \
+                return _mm_cvtsi128_si32(vec);                                                                         \
             }
     #endif
 // https://github.com/official-stockfish/nnue-pytorch/blob/master/docs/nnue.md
 // https://cosmo.tardis.ac/files/2024-06-01-nnue.html
 // https://github.com/ksw0518/Turbulence_v4/blob/96c9eaaa96afa0e16f16daec9f99cf6018f1e119/Turbulence_v4/Evaluation.cpp#L498
-int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
-                              const std::array<int16_t, HL_N>& OPP, Color col,
+int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM, const std::array<int16_t, HL_N>& OPP, Color col,
                               size_t bucket) {
     const size_t VECTOR_SIZE = sizeof(nativeVector) / sizeof(int16_t);
-    static_assert(HL_N % VECTOR_SIZE == 0,
-                  "HL size must be divisible by the native register size of "
-                  "your CPU for vectorization to work");
+    static_assert(HL_N % VECTOR_SIZE == 0, "HL size must be divisible by the native register size of "
+                                           "your CPU for vectorization to work");
     const nativeVector VEC_QA = set1_epi16(QA);
     const nativeVector VEC_ZERO = set1_epi16(0);
 
     nativeVector accumulator{};
     for (size_t i = 0; i < HL_N; i += VECTOR_SIZE) {
         // load a SIMD vector of inputs, x
-        const nativeVector stmAccumValues =
-            load_epi16(reinterpret_cast<const nativeVector*>(&STM[i]));
-        const nativeVector nstmAccumValues =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OPP[i]));
+        const nativeVector stmAccumValues = load_epi16(reinterpret_cast<const nativeVector*>(&STM[i]));
+        const nativeVector nstmAccumValues = load_epi16(reinterpret_cast<const nativeVector*>(&OPP[i]));
 
         // compute the clipped ReLU of the inputs, v
-        const nativeVector stmClamped =
-            min_epi16(VEC_QA, max_epi16(stmAccumValues, VEC_ZERO));
-        const nativeVector nstmClamped =
-            min_epi16(VEC_QA, max_epi16(nstmAccumValues, VEC_ZERO));
+        const nativeVector stmClamped = min_epi16(VEC_QA, max_epi16(stmAccumValues, VEC_ZERO));
+        const nativeVector nstmClamped = min_epi16(VEC_QA, max_epi16(nstmAccumValues, VEC_ZERO));
 
         // load the weights, w
-        const nativeVector stmWeights =
-            load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i]));
-        const nativeVector nstmWeights = load_epi16(
-            reinterpret_cast<const nativeVector*>(&OW[bucket][i + HL_N]));
+        const nativeVector stmWeights = load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i]));
+        const nativeVector nstmWeights = load_epi16(reinterpret_cast<const nativeVector*>(&OW[bucket][i + HL_N]));
 
         // SCReLU it
-        const nativeVector stmActivated =
-            madd_epi16(stmClamped, mullo_epi16(stmClamped, stmWeights));
-        const nativeVector nstmActivated =
-            madd_epi16(nstmClamped, mullo_epi16(nstmClamped, nstmWeights));
+        const nativeVector stmActivated = madd_epi16(stmClamped, mullo_epi16(stmClamped, stmWeights));
+        const nativeVector nstmActivated = madd_epi16(nstmClamped, mullo_epi16(nstmClamped, nstmWeights));
 
         accumulator = add_epi32(accumulator, stmActivated);
         accumulator = add_epi32(accumulator, nstmActivated);
@@ -126,8 +115,7 @@ int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
 
 #else
 
-int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM,
-                              const std::array<int16_t, HL_N>& OPP, Color col,
+int32_t NNUE::optimizedSCReLU(const std::array<int16_t, HL_N>& STM, const std::array<int16_t, HL_N>& OPP, Color col,
                               size_t bucket) {
     int32_t eval = 0;
     for (int i = 0; i < HL_N; i++) {
@@ -184,15 +172,12 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
 
     Color stm = board.sideToMove();
 
-    const std::array<int16_t, HL_N>& accumulatorSTM =
-        stm == Color::WHITE ? accumulator.white : accumulator.black;
-    const std::array<int16_t, HL_N>& accumulatorOPP =
-        stm == Color::BLACK ? accumulator.white : accumulator.black;
+    const std::array<int16_t, HL_N>& accumulatorSTM = stm == Color::WHITE ? accumulator.white : accumulator.black;
+    const std::array<int16_t, HL_N>& accumulatorOPP = stm == Color::BLACK ? accumulator.white : accumulator.black;
 
     // Output buckets are calculated using piececount. Each bucket corresponds
     // to (cnt-2)/(32/N)
-    const size_t outputBucket =
-        (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
+    const size_t outputBucket = (board.occ().count() - 2) / (32 / OUTPUT_BUCKETS);
 
     int64_t eval = 0;
 
@@ -205,8 +190,7 @@ int NNUE::inference(Board& board, Accumulator& accumulator) {
             }
         }
     } else {
-        eval =
-            optimizedSCReLU(accumulatorSTM, accumulatorOPP, stm, outputBucket);
+        eval = optimizedSCReLU(accumulatorSTM, accumulatorOPP, stm, outputBucket);
         eval /= QA;
     }
 
@@ -228,10 +212,8 @@ void Accumulator::refresh(Board& board) {
         Square sq = whiteBB.pop();
 
         // White features for both perspectives
-        int wf = NNUE::feature(Color::WHITE, Color::WHITE,
-                               board.at<PieceType>(sq), sq);
-        int bf = NNUE::feature(Color::BLACK, Color::WHITE,
-                               board.at<PieceType>(sq), sq);
+        int wf = NNUE::feature(Color::WHITE, Color::WHITE, board.at<PieceType>(sq), sq);
+        int bf = NNUE::feature(Color::BLACK, Color::WHITE, board.at<PieceType>(sq), sq);
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
@@ -244,10 +226,8 @@ void Accumulator::refresh(Board& board) {
         Square sq = blackBB.pop();
 
         // Black features for both perspectives
-        int wf = NNUE::feature(Color::WHITE, Color::BLACK,
-                               board.at<PieceType>(sq), sq);
-        int bf = NNUE::feature(Color::BLACK, Color::BLACK,
-                               board.at<PieceType>(sq), sq);
+        int wf = NNUE::feature(Color::WHITE, Color::BLACK, board.at<PieceType>(sq), sq);
+        int bf = NNUE::feature(Color::BLACK, Color::BLACK, board.at<PieceType>(sq), sq);
 
         for (int i = 0; i < HL_N; i++) {
             // Do the matrix mutliply for the next layer
@@ -259,14 +239,12 @@ void Accumulator::refresh(Board& board) {
 
 void Accumulator::print() {
     for (int i = 0; i < HL_N; i++) {
-        std::cout << "White: " << white[i] << " Black: " << black[i]
-                  << std::endl;
+        std::cout << "White: " << white[i] << " Black: " << black[i] << std::endl;
     }
 }
 
 // Quiet Accumulation
-void Accumulator::quiet(Color stm, Square add, PieceType addPT, Square sub,
-                        PieceType subPT) {
+void Accumulator::quiet(Color stm, Square add, PieceType addPT, Square sub, PieceType subPT) {
 
     const int addW = NNUE::feature(Color::WHITE, stm, addPT, add);
     const int addB = NNUE::feature(Color::BLACK, stm, addPT, add);
@@ -280,8 +258,8 @@ void Accumulator::quiet(Color stm, Square add, PieceType addPT, Square sub,
     }
 }
 // Capture Accumulation
-void Accumulator::capture(Color stm, Square add, PieceType addPT, Square sub1,
-                          PieceType subPT1, Square sub2, PieceType subPT2) {
+void Accumulator::capture(Color stm, Square add, PieceType addPT, Square sub1, PieceType subPT1, Square sub2,
+                          PieceType subPT2) {
     const int addW = NNUE::feature(Color::WHITE, stm, addPT, add);
     const int addB = NNUE::feature(Color::BLACK, stm, addPT, add);
 
@@ -292,9 +270,7 @@ void Accumulator::capture(Color stm, Square add, PieceType addPT, Square sub1,
     const int subB2 = NNUE::feature(Color::BLACK, ~stm, subPT2, sub2);
 
     for (int i = 0; i < HL_N; i++) {
-        white[i] += network.H1[addW * HL_N + i] - network.H1[subW1 * HL_N + i] -
-                    network.H1[subW2 * HL_N + i];
-        black[i] += network.H1[addB * HL_N + i] - network.H1[subB1 * HL_N + i] -
-                    network.H1[subB2 * HL_N + i];
+        white[i] += network.H1[addW * HL_N + i] - network.H1[subW1 * HL_N + i] - network.H1[subW2 * HL_N + i];
+        black[i] += network.H1[addB * HL_N + i] - network.H1[subB1 * HL_N + i] - network.H1[subB2 * HL_N + i];
     }
 }

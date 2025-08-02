@@ -146,7 +146,10 @@ namespace Search {
 
                 double prop = static_cast<double>(nodeCounts[bestMove.move() & 4095]) / static_cast<double>(totalNodes);
                 double scale = (NODE_TM_BASE() / 100.0 - prop) * (NODE_TM_SCALE() / 100.0);
-                double compScale = std::max((COMPLEXITY_TM_BASE() / 100.0) + std::clamp(complexity, 0.0, 200.0) / static_cast<double>(COMPLEXITY_TM_DIVISOR()), 1.0);
+                double compScale =
+                    std::max((COMPLEXITY_TM_BASE() / 100.0) +
+                                 std::clamp(complexity, 0.0, 200.0) / static_cast<double>(COMPLEXITY_TM_DIVISOR()),
+                             1.0);
                 return (static_cast<int64_t>(timer.elapsed()) >= softtime * scale * compScale);
             }
     };
@@ -159,8 +162,8 @@ namespace Search {
             std::mutex mutex;
             std::condition_variable cv;
 
-
-            std::atomic<bool> searching;;
+            std::atomic<bool> searching;
+            ;
             std::atomic<bool> stopped = false;
             std::atomic<bool> exiting = false;
 
@@ -219,7 +222,7 @@ namespace Search {
                 return nodes.load(std::memory_order::relaxed);
             }
 
-            int threatIndex(Move move, Bitboard threats){
+            int threatIndex(Move move, Bitboard threats) {
                 return 2 * threats.check(move.from().index()) + threats.check(move.to().index());
             }
 
@@ -231,7 +234,8 @@ namespace Search {
             // Butterfly history
             void updateHistory(Stack* ss, Board& board, Move m, int bonus) {
                 int clamped = std::clamp(int(bonus), int(-MAX_HISTORY), int(MAX_HISTORY));
-                int& entry = history[(int)board.sideToMove()][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
+                int& entry =
+                    history[(int)board.sideToMove()][m.from().index()][m.to().index()][threatIndex(m, ss->threats[6])];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
             }
 
@@ -261,8 +265,8 @@ namespace Search {
             // Pawn History
             void updatePawnhist(Stack* ss, Board& board, Move m, int16_t bonus) {
                 int16_t clamped = std::clamp((int)bonus, int(-MAX_HISTORY), int(MAX_HISTORY));
-                int16_t& entry = 
-                    pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                int16_t& entry = pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES]
+                                            [(int)board.at<PieceType>(m.from())][m.to().index()];
                 entry += clamped - entry * std::abs(clamped) / MAX_HISTORY;
                 entry = std::clamp(int(entry), int(-MAX_HISTORY), int(MAX_HISTORY));
             }
@@ -285,11 +289,10 @@ namespace Search {
                 updateEntry(whiteNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[0] % CORR_HIST_ENTRIES]);
                 updateEntry(blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES]);
                 // Continuation Correction History
-                if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
-                    auto &table = *(ss - 2)->contCorrhist;
-                    updateEntry(
-                        table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()]
-                    );
+                if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) &&
+                    !moveIsNull((ss - 1)->move)) {
+                    auto& table = *(ss - 2)->contCorrhist;
+                    updateEntry(table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()]);
                 }
             }
             // ----------------- History getters
@@ -315,7 +318,8 @@ namespace Search {
             }
 
             int16_t getPawnhist(Board& board, Move m, Stack* ss) {
-                return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES][(int)board.at<PieceType>(m.from())][m.to().index()];
+                return pawnHistory[board.sideToMove()][ss->pawnKey % PAWN_HIST_ENTRIES]
+                                  [(int)board.at<PieceType>(m.from())][m.to().index()];
             }
 
             int getQuietHistory(Board& board, Move m, Stack* ss) {
@@ -339,10 +343,11 @@ namespace Search {
                               blackNonPawnCorrhist[board.sideToMove()][ss->nonPawnKey[1] % CORR_HIST_ENTRIES];
 
                 // Continuation Correction History
-                if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) && !moveIsNull((ss - 1)->move)) {
-                    auto &table = *(ss - 2)->contCorrhist;
-                    correction += 
-                        CONT_CORR_WEIGHT() * table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()];
+                if (ss->ply >= 2 && (ss - 2)->contCorrhist != nullptr && !moveIsNull((ss - 2)->move) &&
+                    !moveIsNull((ss - 1)->move)) {
+                    auto& table = *(ss - 2)->contCorrhist;
+                    correction += CONT_CORR_WEIGHT() *
+                                  table[~board.sideToMove()][(int)((ss - 1)->movedPiece)][(ss - 1)->move.to().index()];
                 }
 
                 int corrected = eval + correction / 2048;

@@ -13,8 +13,7 @@ void MovePicker::scoreMoves(Movelist& moves) {
             PieceType to = thread->board.at<PieceType>(move.to());
             if (move.typeOf() == Move::ENPASSANT)
                 to = PieceType::PAWN;
-            int score =
-                thread->getCapthist(thread->board, move) + MVV_VALUES[to];
+            int score = thread->getCapthist(thread->board, move) + MVV_VALUES[to];
             move.setScore(score);
         } else {
             PieceType pt = thread->board.at<PieceType>(move.from());
@@ -28,14 +27,12 @@ void MovePicker::scoreMoves(Movelist& moves) {
                 Bitboard threats = pawnThreats | knightThreats | bishopThreats | rookThreats;
                 score += (threats & fromBB).empty() ? 0 : 12228;
                 score -= (threats & toBB).empty() ? 0 : 11264;
-            }
-            else if (pt == PieceType::ROOK) {
+            } else if (pt == PieceType::ROOK) {
                 // P, N, B
                 Bitboard threats = pawnThreats | knightThreats | bishopThreats;
                 score += (threats & fromBB).empty() ? 0 : 10240;
                 score -= (threats & toBB).empty() ? 0 : 9216;
-            }
-            else if (pt == PieceType::BISHOP || pt == PieceType::KNIGHT) {
+            } else if (pt == PieceType::BISHOP || pt == PieceType::KNIGHT) {
                 // P
                 Bitboard threats = pawnThreats;
                 score += (threats & fromBB).empty() ? 0 : 8192;
@@ -67,13 +64,11 @@ Move MovePicker::nextMove() {
             ++stage;
             // Only return ttMove if in QS if we're in check or if its a capture
             if (isLegal(thread->board, ttMove) &&
-                (!isQS || thread->board.isCapture(ttMove) ||
-                 thread->board.inCheck())) {
+                (!isQS || thread->board.isCapture(ttMove) || thread->board.inCheck())) {
                 return ttMove;
             }
         case GEN_NOISY:
-            movegen::legalmoves<movegen::MoveGenType::CAPTURE>(movesList,
-                                                               thread->board);
+            movegen::legalmoves<movegen::MoveGenType::CAPTURE>(movesList, thread->board);
             scoreMoves(movesList);
             ++stage;
 
@@ -92,16 +87,14 @@ Move MovePicker::nextMove() {
 
         case KILLER:
             ++stage;
-            if (ss->killer != ttMove && !isQS &&
-                isLegal(thread->board, ss->killer))
+            if (ss->killer != ttMove && !isQS && isLegal(thread->board, ss->killer))
                 return ss->killer;
 
         case GEN_QUIET:
             movesList.clear();
             currMove = 0;
             if (thread->board.inCheck() || !isQS) {
-                movegen::legalmoves<movegen::MoveGenType::QUIET>(movesList,
-                                                                 thread->board);
+                movegen::legalmoves<movegen::MoveGenType::QUIET>(movesList, thread->board);
                 scoreMoves(movesList);
             }
             ++stage;

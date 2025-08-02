@@ -34,16 +34,23 @@ MarlinFormat::MarlinFormat(Board& board) {
         Color ptColor = board.at(sq).color();
 
         Board::CastlingRights cr = board.castlingRights();
-        Square whiteKingRook = Square(cr.getRookFile(Color::WHITE, Board::CastlingRights::Side::KING_SIDE), Rank::RANK_1);
-        Square blackKingRook = Square(cr.getRookFile(Color::BLACK, Board::CastlingRights::Side::KING_SIDE), Rank::RANK_8);
-        Square whiteQueenRook = Square(cr.getRookFile(Color::WHITE, Board::CastlingRights::Side::QUEEN_SIDE), Rank::RANK_1);
-        Square blackQueenRook = Square(cr.getRookFile(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE), Rank::RANK_8);
-        
-        if (pt == PieceType::ROOK &&
-            ((sq == whiteQueenRook && ptColor == Color::WHITE && cr.has(Color::WHITE, Board::CastlingRights::Side::QUEEN_SIDE)) ||
-             (sq == whiteKingRook && ptColor == Color::WHITE && cr.has(Color::WHITE, Board::CastlingRights::Side::KING_SIDE)) ||
-             (sq == blackQueenRook && ptColor == Color::BLACK && cr.has(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE)) ||
-             (sq == blackKingRook && ptColor == Color::BLACK && cr.has(Color::BLACK, Board::CastlingRights::Side::KING_SIDE)))){
+        Square whiteKingRook =
+            Square(cr.getRookFile(Color::WHITE, Board::CastlingRights::Side::KING_SIDE), Rank::RANK_1);
+        Square blackKingRook =
+            Square(cr.getRookFile(Color::BLACK, Board::CastlingRights::Side::KING_SIDE), Rank::RANK_8);
+        Square whiteQueenRook =
+            Square(cr.getRookFile(Color::WHITE, Board::CastlingRights::Side::QUEEN_SIDE), Rank::RANK_1);
+        Square blackQueenRook =
+            Square(cr.getRookFile(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE), Rank::RANK_8);
+
+        if (pt == PieceType::ROOK && ((sq == whiteQueenRook && ptColor == Color::WHITE &&
+                                       cr.has(Color::WHITE, Board::CastlingRights::Side::QUEEN_SIDE)) ||
+                                      (sq == whiteKingRook && ptColor == Color::WHITE &&
+                                       cr.has(Color::WHITE, Board::CastlingRights::Side::KING_SIDE)) ||
+                                      (sq == blackQueenRook && ptColor == Color::BLACK &&
+                                       cr.has(Color::BLACK, Board::CastlingRights::Side::QUEEN_SIDE)) ||
+                                      (sq == blackKingRook && ptColor == Color::BLACK &&
+                                       cr.has(Color::BLACK, Board::CastlingRights::Side::KING_SIDE)))) {
             pt = PieceType::NONE; // This is bad but everything will have a
                                   // piecetype cuz occupancy only, therefore
                                   // NONE is unique on this condition only
@@ -179,10 +186,10 @@ void runThread(int ti, bool isDFRC) {
             limit.start();
             thread->nodes = 0;
             thread->bestMove = Move::NO_MOVE;
-            
+
             int eval = Search::iterativeDeepening(board, *thread, limit, nullptr);
             TT.incAge();
-            
+
             eval = std::min(std::max(-INFINITE, eval), INFINITE);
             eval = board.sideToMove() == Color::WHITE ? eval : -eval;
             Move m = thread->bestMove;

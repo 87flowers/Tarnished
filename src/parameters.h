@@ -20,8 +20,8 @@ using u128 = std::_Unsigned128;
 using u128 = unsigned __int128;
 #endif
 
-//#define TUNE
-// #define LMR_TUNE
+// #define TUNE
+//  #define LMR_TUNE
 
 // Struct for tunable parameters
 struct TunableParam {
@@ -54,7 +54,6 @@ const int LMR_THREE_COUNT = LMR_ONE_COUNT * (LMR_ONE_COUNT - 1) * (LMR_ONE_COUNT
 extern std::array<int, LMR_ONE_COUNT> LMR_ONE_PAIR;
 extern std::array<int, LMR_TWO_COUNT> LMR_TWO_PAIR;
 extern std::array<int, LMR_THREE_COUNT> LMR_THREE_PAIR;
-
 
 std::list<TunableParam>& tunables();
 TunableParam& addTunableParam(std::string name, int value, int min, int max, int step);

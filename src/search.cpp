@@ -10,7 +10,6 @@
 #include <array>
 #include <random>
 
-
 using namespace chess;
 
 uint8_t TT_GENERATION_COUNTER = 0;
@@ -156,9 +155,10 @@ namespace Search {
         return std::abs(score) >= FOUND_MATE;
     }
     int evaluate(Board& board, Accumulator& accumulator) {
-        int materialOffset = 100 * board.pieces(PieceType::PAWN).count() + 450 * board.pieces(PieceType::KNIGHT).count() + 
-                            450 * board.pieces(PieceType::BISHOP).count() + 650 * board.pieces(PieceType::ROOK).count() + 
-                            1250 * board.pieces(PieceType::QUEEN).count();
+        int materialOffset =
+            100 * board.pieces(PieceType::PAWN).count() + 450 * board.pieces(PieceType::KNIGHT).count() +
+            450 * board.pieces(PieceType::BISHOP).count() + 650 * board.pieces(PieceType::ROOK).count() +
+            1250 * board.pieces(PieceType::QUEEN).count();
 
         int eval = network.inference(board, accumulator);
 
@@ -206,7 +206,7 @@ namespace Search {
         bool ttHit = false;
 
         ttHit = thread.TT.probe(thread.board.hash(), ply, ttData);
-        
+
         bool ttPV = isPV || (ttHit && ttData.pv);
 
         if (!isPV && ttData.score != EVAL_NONE &&
@@ -228,10 +228,8 @@ namespace Search {
                                 : evaluate(thread.board, ss->accumulator);
             eval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             // If conditions met, use TT score as eval
-            if (ttHit && 
-                (ttData.bound == TTFlag::EXACT ||
-                    (ttData.bound == TTFlag::BETA_CUT && ttData.score >= eval) ||
-                    (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= eval))) {
+            if (ttHit && (ttData.bound == TTFlag::EXACT || (ttData.bound == TTFlag::BETA_CUT && ttData.score >= eval) ||
+                          (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= eval))) {
                 eval = ttData.score;
             }
         }
@@ -248,7 +246,7 @@ namespace Search {
 
         // Calculuate Threats
         ss->threats = calculateThreats(thread.board);
-        
+
         // This will do evasions as well
         Move move;
         MovePicker picker = MovePicker(&thread, ss, ttData.move, true);
@@ -354,10 +352,9 @@ namespace Search {
             corrplexity = rawStaticEval - ss->staticEval;
 
             // If conditions met, use TT score as eval
-            if (ttHit && 
-                (ttData.bound == TTFlag::EXACT ||
-                    (ttData.bound == TTFlag::BETA_CUT && ttData.score >= ss->eval) ||
-                    (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= ss->eval))) {
+            if (ttHit &&
+                (ttData.bound == TTFlag::EXACT || (ttData.bound == TTFlag::BETA_CUT && ttData.score >= ss->eval) ||
+                 (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= ss->eval))) {
                 ss->eval = ttData.score;
             }
         }
@@ -461,7 +458,8 @@ namespace Search {
                 if (!isPV && !inCheck && moveCount >= 2 + depth * depth / (2 - improving))
                     break;
 
-                if (!isPV && isQuiet && depth <= 4 && thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
+                if (!isPV && isQuiet && depth <= 4 &&
+                    thread.getQuietHistory(thread.board, move, ss) <= -HIST_PRUNING_SCALE() * depth) {
                     skipQuiets = true;
                     continue;
                 }
@@ -471,10 +469,11 @@ namespace Search {
                     skipQuiets = true;
                     continue;
                 }
-                // Reckless idea 
+                // Reckless idea
                 // Bad noisy futility pruning
                 futility = ss->staticEval + BNFP_DEPTH_SCALE() * depth + BNFP_MOVECOUNT_SCALE() * moveCount / 128;
-                if (!inCheck && depth <= 5 && picker.stage == MPStage::BAD_NOISY && std::abs(alpha) < 2000 && futility <= alpha) {
+                if (!inCheck && depth <= 5 && picker.stage == MPStage::BAD_NOISY && std::abs(alpha) < 2000 &&
+                    futility <= alpha) {
                     if (!isMateScore(bestScore) && bestScore <= futility)
                         bestScore = futility;
                     break;
@@ -483,7 +482,6 @@ namespace Search {
                 int seeMargin = isQuiet ? SEE_QUIET_SCALE() * lmrDepth : SEE_NOISY_SCALE() * lmrDepth;
                 if (!SEE(thread.board, move, seeMargin))
                     continue;
-
             }
 
             // Singular Extensions
@@ -507,12 +505,10 @@ namespace Search {
                         extension = 2; // Double extension
                     else
                         extension = 1; // Singular Extension
-                } 
-                else if (ttData.score >= beta)
+                } else if (ttData.score >= beta)
                     extension = -3; // Negative Extension
                 else if (cutnode)
                     extension = -2;
-
             }
 
             // Update Continuation History
@@ -542,10 +538,11 @@ namespace Search {
                 // | table of 6, two table of 6x5/2=15, and three way of         |
                 // | 6x5x3/3!=20. Thanks to AGE for this idea                    |
                 // ---------------------------------------------------------------
-                reduction += lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2)});
+                reduction +=
+                    lmrConvolution({isQuiet, !isPV, improving, cutnode, ttPV, ttHit, ((ss + 1)->failHighs > 2)});
                 // Reduce less if good history
                 reduction -= 1024 * ss->historyScore / LMR_HIST_DIVISOR();
-                
+
                 reduction /= 1024;
 
                 int lmrDepth = std::min(newDepth, std::max(1, newDepth - reduction));
@@ -673,7 +670,6 @@ namespace Search {
             ss->accumulator = baseAcc;
             int eval = evaluate(threadInfo.board, ss->accumulator);
 
-            
             // Aspiration Windows
             if (depth >= MIN_ASP_WINDOW_DEPTH()) {
                 int delta = INITIAL_ASP_WINDOW();
@@ -736,13 +732,15 @@ namespace Search {
                     }
                 }
                 std::cout << " hashfull " << searcher->TT.hashfull();
-                std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time " << limit.timer.elapsed() << " pv ";
+                std::cout << " nodes " << nodecnt << " nps " << nodecnt / (limit.timer.elapsed() + 1) * 1000 << " time "
+                          << limit.timer.elapsed() << " pv ";
                 std::cout << pvss.str() << std::endl;
             }
             // Time control (soft)
             double complexity = 0;
             if (!isMateScore(score))
-                complexity = (COMPLEXITY_TM_SCALE() / 100.0) * std::abs(eval - score) * std::log(static_cast<double>(depth));
+                complexity =
+                    (COMPLEXITY_TM_SCALE() / 100.0) * std::abs(eval - score) * std::log(static_cast<double>(depth));
             if (limit.outOfTimeSoft(lastPV.moves[0], threadInfo.nodes, complexity))
                 break;
         }

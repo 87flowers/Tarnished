@@ -8,15 +8,13 @@
 #include <thread>
 #include <vector>
 
-Search::ThreadInfo::ThreadInfo(ThreadType t, TTable& tt, Searcher* s)
-    : type(t), TT(tt), searcher(s) {
+Search::ThreadInfo::ThreadInfo(ThreadType t, TTable& tt, Searcher* s) : type(t), TT(tt), searcher(s) {
     board = Board();
     thread = std::thread(&Search::ThreadInfo::idle, this);
     reset();
 };
 
-Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s)
-    : threadId(id), TT(tt), searcher(s) {
+Search::ThreadInfo::ThreadInfo(int id, TTable& tt, Searcher* s) : threadId(id), TT(tt), searcher(s) {
     type = id == 0 ? ThreadType::MAIN : ThreadType::SECONDARY;
     board = Board();
     thread = std::thread(&Search::ThreadInfo::idle, this);
@@ -38,9 +36,8 @@ void Search::ThreadInfo::startSearching() {
     nodes = 0;
     bestMove = Move::NO_MOVE;
     bestRootScore = -INFINITE;
-    
-    Search::iterativeDeepening(searcher->board, *this, searcher->limit,
-                               searcher);
+
+    Search::iterativeDeepening(searcher->board, *this, searcher->limit, searcher);
 
     if (type == ThreadType::MAIN) {
         searcher->stopSearching();
@@ -61,15 +58,11 @@ void Search::ThreadInfo::startSearching() {
             if ((bestDepth == currentDepth && currentScore > bestScore) ||
                 (Search::isWin(currentScore) && currentScore > bestScore))
                 bestSearcher = thread.get();
-            if (currentDepth > bestDepth &&
-                (currentScore > bestScore || !Search::isWin(bestScore)))
+            if (currentDepth > bestDepth && (currentScore > bestScore || !Search::isWin(bestScore)))
                 bestSearcher = thread.get();
         }
         searcher->TT.incAge();
-        std::cout << "\nbestmove "
-                  << uci::moveToUci(bestSearcher->bestMove,
-                                    searcher->board.chess960())
-                  << std::endl;
+        std::cout << "\nbestmove " << uci::moveToUci(bestSearcher->bestMove, searcher->board.chess960()) << std::endl;
     }
 }
 
