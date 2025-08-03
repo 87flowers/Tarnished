@@ -345,6 +345,14 @@ namespace Search {
                                 : evaluate(thread.board, ss->accumulator);
             ss->eval = ss->staticEval = thread.correctStaticEval(ss, thread.board, rawStaticEval);
             corrplexity = rawStaticEval - ss->staticEval;
+
+            // If conditions met, use TT score as eval
+            if (ttHit && isLegal(thread.board, ttData.move) &&
+                (ttData.bound == TTFlag::EXACT ||
+                    (ttData.bound == TTFlag::BETA_CUT && ttData.score >= ss->eval) ||
+                    (ttData.bound == TTFlag::FAIL_LOW && ttData.score <= ss->eval))) {
+                ss->eval = ttData.score;
+            }
         }
         // Improving heurstic
         // We are better than 2 plies ago
